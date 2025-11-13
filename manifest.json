@@ -1,15 +1,14 @@
-
 {
   "short_name": "Inspecteur",
   "name": "Carrosserie Inspecteur",
   "icons": [
     {
-      "src": "https://picsum.photos/192/192",
+      "src": "https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://picsum.photos/512/512",
+      "src": "https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
