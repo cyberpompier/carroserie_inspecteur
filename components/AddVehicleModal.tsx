@@ -49,7 +49,8 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
           React.createElement(XIcon)
         )
       ),
-      React.createElement('form', { onSubmit: handleSave, className: "space-y-4" },
+      // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
+      React.createElement('form', { onSubmit: handleSave, className: "space-y-4" } as any,
         React.createElement('div', null,
           React.createElement('label', { htmlFor: "vehicle-name", className: "block text-sm font-medium text-gray-300 mb-1" },
             "Nom du véhicule"

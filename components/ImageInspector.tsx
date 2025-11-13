@@ -4,14 +4,20 @@ import { supabase } from '../lib/supabase.js';
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 8;
 const MARKER_RADIUS = 15; // Visual radius on screen
+const DOUBLE_TAP_DELAY = 300; // ms for double tap detection
 
 export const ImageInspector = ({ imagePath, markers, onAddMarker, selectedMarker, onSelectMarker }) => {
   const canvasRef = useRef(null);
   const imageRef = useRef(null);
   const [objectUrl, setObjectUrl] = useState(null);
   const [transform, setTransform] = useState({ scale: 1, offsetX: 0, offsetY: 0 });
-  const isPanning = useRef(false);
-  const panStart = useRef({ x: 0, y: 0 });
+  
+  // Unified interaction refs for both mouse and touch
+  const isInteracting = useRef(false);
+  const interactionStart = useRef({ clientX: 0, clientY: 0 });
+  const pinchStart = useRef({ distance: 0, transform: { scale: 1, offsetX: 0, offsetY: 0 } });
+  const lastTap = useRef(0);
+
   const animationFrameId = useRef(undefined);
   const pulseRadius = useRef(0);
 
@@ -205,51 +211,100 @@ export const ImageInspector = ({ imagePath, markers, onAddMarker, selectedMarker
     };
   }, [selectedMarker, draw, transform.scale]);
 
-  const getCanvasCoords = (e) => {
+  const getCanvasCoords = useCallback((coords) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const handleMouseDown = (e) => {
-    isPanning.current = true;
-    panStart.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = (e) => {
-    if (!isPanning.current) return;
-    
-    const dx = e.clientX - panStart.current.x;
-    const dy = e.clientY - panStart.current.y;
-    isPanning.current = false;
-
-    if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
-      const { x, y } = getCanvasCoords(e);
-      const imageX = (x - transform.offsetX) / transform.scale;
-      const imageY = (y - transform.offsetY) / transform.scale;
-      
-      const clickedMarker = markers.find(marker => {
-        const distance = Math.sqrt(Math.pow(marker.x - imageX, 2) + Math.pow(marker.y - imageY, 2));
-        return distance < (MARKER_RADIUS / transform.scale);
-      });
-
-      if (clickedMarker) {
-        onSelectMarker(clickedMarker.id);
-      } else if (imageRef.current && imageX >= 0 && imageX <= imageRef.current.width && imageY >=0 && imageY <= imageRef.current.height){
-        onAddMarker(imageX, imageY);
-      }
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isPanning.current) return;
-    const dx = e.clientX - panStart.current.x;
-    const dy = e.clientY - panStart.current.y;
-    panStart.current = { x: e.clientX, y: e.clientY };
-    setTransform(t => ({ ...t, offsetX: t.offsetX + dx, offsetY: t.offsetY + dy }));
+    return { x: coords.clientX - rect.left, y: coords.clientY - rect.top };
+  }, []);
+  
+  const getDistance = (touches) => {
+    const [t1, t2] = touches;
+    return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
   };
   
+  const getMidpoint = (touches) => {
+      const [t1, t2] = touches;
+      return { clientX: (t1.clientX + t2.clientX) / 2, clientY: (t1.clientY + t2.clientY) / 2 };
+  };
+
+  const handleInteractionStart = useCallback((e) => {
+    isInteracting.current = true;
+    if (e.touches && e.touches.length === 2) {
+      pinchStart.current = { distance: getDistance(e.touches), transform: { ...transform } };
+    } else {
+      const touchOrMouse = e.touches ? e.touches[0] : e;
+      interactionStart.current = { clientX: touchOrMouse.clientX, clientY: touchOrMouse.clientY };
+    }
+  }, [transform]);
+
+  const handleInteractionEnd = useCallback((e) => {
+    if (!isInteracting.current) return;
+    
+    const touchOrMouse = e.changedTouches ? e.changedTouches[0] : e;
+    const dx = touchOrMouse.clientX - interactionStart.current.clientX;
+    const dy = touchOrMouse.clientY - interactionStart.current.clientY;
+    
+    isInteracting.current = false;
+
+    if (Math.abs(dx) < 5 && Math.abs(dy) < 5) { // It's a tap/click
+      const now = Date.now();
+      if (now - lastTap.current < DOUBLE_TAP_DELAY) {
+        if (canvasRef.current && imageRef.current) {
+            resetTransform(canvasRef.current, imageRef.current);
+        }
+      } else {
+        const { x, y } = getCanvasCoords(touchOrMouse);
+        const imageX = (x - transform.offsetX) / transform.scale;
+        const imageY = (y - transform.offsetY) / transform.scale;
+        
+        const clickedMarker = markers.find(marker => {
+          const distance = Math.sqrt(Math.pow(marker.x - imageX, 2) + Math.pow(marker.y - imageY, 2));
+          return distance < (MARKER_RADIUS / transform.scale);
+        });
+
+        if (clickedMarker) {
+          onSelectMarker(clickedMarker.id);
+        } else if (imageRef.current && imageX >= 0 && imageX <= imageRef.current.width && imageY >=0 && imageY <= imageRef.current.height){
+          onAddMarker(imageX, imageY);
+        }
+      }
+      lastTap.current = now;
+    }
+
+    if (e.touches && e.touches.length < 2) {
+      pinchStart.current = { distance: 0, transform: { scale: 1, offsetX: 0, offsetY: 0 } };
+    }
+  }, [getCanvasCoords, markers, onAddMarker, onSelectMarker, resetTransform, transform]);
+  
+  const handleInteractionMove = useCallback((e) => {
+    if (!isInteracting.current) return;
+    e.preventDefault();
+
+    if (e.touches && e.touches.length === 2) { // Pinch
+        const newDistance = getDistance(e.touches);
+        const scaleFactor = newDistance / pinchStart.current.distance;
+        let newScale = pinchStart.current.transform.scale * scaleFactor;
+        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+        
+        const midpoint = getMidpoint(e.touches);
+        const { x: screenX, y: screenY } = getCanvasCoords(midpoint);
+
+        const imageX = (screenX - pinchStart.current.transform.offsetX) / pinchStart.current.transform.scale;
+        const imageY = (screenY - pinchStart.current.transform.offsetY) / pinchStart.current.transform.scale;
+
+        const newOffsetX = screenX - imageX * newScale;
+        const newOffsetY = screenY - imageY * newScale;
+        setTransform({ scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY });
+    } else { // Pan
+        const touchOrMouse = e.touches ? e.touches[0] : e;
+        const dx = touchOrMouse.clientX - interactionStart.current.clientX;
+        const dy = touchOrMouse.clientY - interactionStart.current.clientY;
+        interactionStart.current = { clientX: touchOrMouse.clientX, clientY: touchOrMouse.clientY };
+        setTransform(t => ({ ...t, offsetX: t.offsetX + dx, offsetY: t.offsetY + dy }));
+    }
+  }, [getCanvasCoords]);
+
   const handleWheel = (e) => {
     e.preventDefault();
     const { x, y } = getCanvasCoords(e);
@@ -268,10 +323,17 @@ export const ImageInspector = ({ imagePath, markers, onAddMarker, selectedMarker
   return React.createElement('canvas', {
     ref: canvasRef,
     className: "w-full h-full bg-gray-700 cursor-crosshair",
-    onMouseDown: handleMouseDown,
-    onMouseUp: handleMouseUp,
-    onMouseMove: handleMouseMove,
-    onMouseLeave: () => isPanning.current = false,
-    onWheel: handleWheel
+    style: { touchAction: 'none' },
+    // Mouse events
+    onMouseDown: handleInteractionStart,
+    onMouseUp: handleInteractionEnd,
+    onMouseMove: handleInteractionMove,
+    onMouseLeave: () => { isInteracting.current = false; },
+    onWheel: handleWheel,
+    // Touch events
+    onTouchStart: handleInteractionStart,
+    onTouchEnd: handleInteractionEnd,
+    onTouchMove: handleInteractionMove,
+    onTouchCancel: () => { isInteracting.current = false; }
   });
 };
