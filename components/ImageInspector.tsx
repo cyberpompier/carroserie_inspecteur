@@ -1,27 +1,18 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import type { Marker, Transform } from '../types';
-import { supabase } from '../lib/supabase';
-
-interface ImageInspectorProps {
-  imagePath: string | null;
-  markers: Marker[];
-  onAddMarker: (x: number, y: number) => void;
-  selectedMarker: Marker | null;
-  onSelectMarker: (id: number) => void;
-}
+import { supabase } from '../lib/supabase.js';
 
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 8;
 const MARKER_RADIUS = 15; // Visual radius on screen
 
-export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, markers, onAddMarker, selectedMarker, onSelectMarker }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [transform, setTransform] = useState<Transform>({ scale: 1, offsetX: 0, offsetY: 0 });
+export const ImageInspector = ({ imagePath, markers, onAddMarker, selectedMarker, onSelectMarker }) => {
+  const canvasRef = useRef(null);
+  const imageRef = useRef(null);
+  const [objectUrl, setObjectUrl] = useState(null);
+  const [transform, setTransform] = useState({ scale: 1, offsetX: 0, offsetY: 0 });
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
-  const animationFrameId = useRef<number | undefined>(undefined);
+  const animationFrameId = useRef(undefined);
   const pulseRadius = useRef(0);
 
   const draw = useCallback(() => {
@@ -36,7 +27,6 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     ctx.scale(transform.scale, transform.scale);
     ctx.drawImage(imageRef.current, 0, 0);
     
-    // Draw popup for selected marker
     if (selectedMarker) {
       const POPUP_PADDING = 10 / transform.scale;
       const FONT_SIZE = 14 / transform.scale;
@@ -64,16 +54,14 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
       let popupX = selectedMarker.x + POPUP_OFFSET;
       let popupY = selectedMarker.y - popupHeight - POPUP_OFFSET / 2;
 
-      // Draw popup background
-      ctx.fillStyle = 'rgba(17, 24, 39, 0.9)'; // bg-gray-900
-      ctx.strokeStyle = 'rgba(239, 68, 68, 1)'; // border-red-500
+      ctx.fillStyle = 'rgba(17, 24, 39, 0.9)';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 1)';
       ctx.lineWidth = 2 / transform.scale;
       ctx.beginPath();
       ctx.rect(popupX, popupY, popupWidth, popupHeight);
       ctx.fill();
       ctx.stroke();
 
-      // Draw text
       ctx.fillStyle = 'white';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
@@ -82,11 +70,9 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
       });
     }
 
-    // Draw markers
     markers.forEach(marker => {
       const isSelected = marker.id === selectedMarker?.id;
 
-      // Draw pulse if selected
       if (isSelected) {
           ctx.beginPath();
           ctx.arc(marker.x, marker.y, (MARKER_RADIUS / transform.scale) + pulseRadius.current, 0, 2 * Math.PI);
@@ -114,10 +100,10 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     ctx.restore();
   }, [transform, markers, selectedMarker]);
   
-  const resetTransform = useCallback((canvas: HTMLCanvasElement, image: HTMLImageElement) => {
+  const resetTransform = useCallback((canvas, image) => {
     const scaleX = canvas.width / image.width;
     const scaleY = canvas.height / image.height;
-    const scale = Math.min(scaleX, scaleY) * 0.95; // Leave a little margin
+    const scale = Math.min(scaleX, scaleY) * 0.95;
     const offsetX = (canvas.width - image.width * scale) / 2;
     const offsetY = (canvas.height - image.height * scale) / 2;
     setTransform({ scale, offsetX, offsetY });
@@ -144,9 +130,9 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
   }, [resetTransform]);
   
   useEffect(() => {
-    let currentObjectUrl: string | null = null;
+    let currentObjectUrl = null;
     
-    async function downloadImage(path: string) {
+    async function downloadImage(path) {
       try {
         const { data, error } = await supabase.storage.from('vehicle_images').download(path);
         if (error) {
@@ -155,7 +141,7 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
         currentObjectUrl = URL.createObjectURL(data);
         setObjectUrl(currentObjectUrl);
       } catch (error) {
-        console.error('Error downloading image: ', (error as Error).message);
+        console.error('Error downloading image: ', error.message);
         setObjectUrl(null);
       }
     }
@@ -192,12 +178,11 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     }
   }, [objectUrl, resetTransform]);
 
-  // Animation loop for selected marker
   useEffect(() => {
     const animateHighlight = () => {
-      const pulseDuration = 1200; // ms
+      const pulseDuration = 1200;
       const maxPulseSize = 15 / transform.scale;
-      const t = (Date.now() % pulseDuration) / pulseDuration; // 0 to 1 cycle
+      const t = (Date.now() % pulseDuration) / pulseDuration;
       pulseRadius.current = maxPulseSize * Math.sin(t * Math.PI);
       draw();
       animationFrameId.current = requestAnimationFrame(animateHighlight);
@@ -210,7 +195,7 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
         cancelAnimationFrame(animationFrameId.current);
         animationFrameId.current = undefined;
       }
-      draw(); // Redraw once to remove highlight
+      draw();
     }
 
     return () => {
@@ -220,26 +205,25 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     };
   }, [selectedMarker, draw, transform.scale]);
 
-  const getCanvasCoords = (e: React.MouseEvent | React.WheelEvent): { x: number; y: number } => {
+  const getCanvasCoords = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e) => {
     isPanning.current = true;
     panStart.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = (e) => {
     if (!isPanning.current) return;
     
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
     isPanning.current = false;
 
-    // It's a click, not a pan
     if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
       const { x, y } = getCanvasCoords(e);
       const imageX = (x - transform.offsetX) / transform.scale;
@@ -258,7 +242,7 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e) => {
     if (!isPanning.current) return;
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
@@ -266,7 +250,7 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     setTransform(t => ({ ...t, offsetX: t.offsetX + dx, offsetY: t.offsetY + dy }));
   };
   
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = (e) => {
     e.preventDefault();
     const { x, y } = getCanvasCoords(e);
     const zoom = 1 - e.deltaY * 0.001;
@@ -281,15 +265,13 @@ export const ImageInspector: React.FC<ImageInspectorProps> = ({ imagePath, marke
     setTransform({ scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY });
   };
   
-  return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full bg-gray-700 cursor-crosshair"
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPanning.current = false}
-      onWheel={handleWheel}
-    />
-  );
+  return React.createElement('canvas', {
+    ref: canvasRef,
+    className: "w-full h-full bg-gray-700 cursor-crosshair",
+    onMouseDown: handleMouseDown,
+    onMouseUp: handleMouseUp,
+    onMouseMove: handleMouseMove,
+    onMouseLeave: () => isPanning.current = false,
+    onWheel: handleWheel
+  });
 };

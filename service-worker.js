@@ -1,51 +1,51 @@
-const CACHE_NAME = 'carrosserie-inspecteur-v4';
+const CACHE_NAME = 'carrosserie-inspecteur-v5';
 
-// Déterminer le chemin de base à partir de l'emplacement du service worker lui-même
-// C'est la méthode la plus fiable pour résoudre les chemins relatifs.
 const base = new URL('.', self.location.href);
 const resolve = (path) => new URL(path, base).href;
 
 const urlsToCache = [
-  // Core files - résolus en URL absolues
+  // Core files
   resolve('.'),
   resolve('index.html'),
   resolve('manifest.json'),
 
-  // Source code files - résolus en URL absolues
-  resolve('index.tsx'),
-  resolve('App.tsx'),
-  resolve('types.ts'),
-  resolve('lib/supabase.ts'),
-  resolve('components/AddDefectModal.tsx'),
-  resolve('components/AddVehicleModal.tsx'),
-  resolve('components/Auth.tsx'),
-  resolve('components/Avatar.tsx'),
-  resolve('components/BurgerMenu.tsx'),
-  resolve('components/DefectList.tsx'),
-  resolve('components/Icons.tsx'),
-  resolve('components/ImageInspector.tsx'),
-  resolve('components/InspectionView.tsx'),
-  resolve('components/ProfilePage.tsx'),
-  resolve('components/Toolbar.tsx'),
-  resolve('components/VehicleSelector.tsx'),
+  // Source code files (now .js)
+  resolve('index.js'),
+  resolve('App.js'),
+  resolve('lib/supabase.js'),
+  resolve('components/AddDefectModal.js'),
+  resolve('components/AddVehicleModal.js'),
+  resolve('components/Auth.js'),
+  resolve('components/Avatar.js'),
+  resolve('components/BurgerMenu.js'),
+  resolve('components/DefectList.js'),
+  resolve('components/Icons.js'),
+  resolve('components/ImageInspector.js'),
+  resolve('components/InspectionView.js'),
+  resolve('components/ProfilePage.js'),
+  resolve('components/Toolbar.js'),
+  resolve('components/VehicleSelector.js'),
 
-  // External CDN Dependencies (déjà absolues)
+  // External CDN Dependencies
   'https://cdn.tailwindcss.com',
   'https://aistudiocdn.com/react@^19.2.0',
   'https://aistudiocdn.com/react-dom@^19.2.0/client',
+  'https://aistudiocdn.com/react@^19.2.0/',
+  'https://aistudiocdn.com/react-dom@^19.2.0/',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
 
-  // Icons (déjà absolues)
+  // Icons
   'https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-192.png',
   'https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-512.png'
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Force the waiting service worker to become the active service worker.
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache ouvert, mise en cache de tous les fichiers...');
-        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' })));
+        return cache.addAll(urlsToCache);
       })
   );
 });
@@ -61,7 +61,7 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Take control of all clients as soon as the service worker is activated.
   );
 });
 
