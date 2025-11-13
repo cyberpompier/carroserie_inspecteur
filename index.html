@@ -25,22 +25,15 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Utiliser l'URL du script module comme base fiable pour éviter les problèmes d'origine dans les iframes.
-          const moduleScript = document.querySelector('script[type="module"][src*="index.tsx"]');
-          if (moduleScript) {
-            const base = new URL('.', moduleScript.src);
-            const swUrl = new URL('service-worker.js', base);
-            
-            navigator.serviceWorker.register(swUrl)
-              .then(registration => {
-                console.log('SW registered with URL:', swUrl.href, registration);
-              })
-              .catch(registrationError => {
-                console.log('SW registration failed for URL:', swUrl.href, registrationError);
-              });
-          } else {
-            console.error("Impossible de trouver le script de l'application pour enregistrer le Service Worker.");
-          }
+          // Utiliser la méthode la plus simple et la plus fiable.
+          // Le navigateur résoudra ce chemin relatif par rapport à l'origine réelle du document.
+          navigator.serviceWorker.register('service-worker.js')
+            .then(registration => {
+              console.log('SW registered:', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed:', registrationError);
+            });
         });
       }
     </script>
