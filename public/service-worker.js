@@ -1,30 +1,28 @@
-const CACHE_NAME = 'carrosserie-inspecteur-v6';
+const CACHE_NAME = 'carrosserie-inspecteur-v7';
 
-const base = new URL('.', self.location.href);
-const resolve = (path) => new URL(path, base).href;
-
+// NOTE: Tous les chemins sont maintenant relatifs à la racine où se trouve le service worker.
 const urlsToCache = [
   // Core files
-  resolve('.'),
-  resolve('index.html'),
-  resolve('manifest.json'),
+  '.',
+  'index.html',
+  'manifest.json',
 
   // Source code files (now .js)
-  resolve('index.js'),
-  resolve('App.js'),
-  resolve('lib/supabase.js'),
-  resolve('components/AddDefectModal.js'),
-  resolve('components/AddVehicleModal.js'),
-  resolve('components/Auth.js'),
-  resolve('components/Avatar.js'),
-  resolve('components/BurgerMenu.js'),
-  resolve('components/DefectList.js'),
-  resolve('components/Icons.js'),
-  resolve('components/ImageInspector.js'),
-  resolve('components/InspectionView.js'),
-  resolve('components/ProfilePage.js'),
-  resolve('components/Toolbar.js'),
-  resolve('components/VehicleSelector.js'),
+  'index.js',
+  'App.js',
+  'lib/supabase.js',
+  'components/AddDefectModal.js',
+  'components/AddVehicleModal.js',
+  'components/Auth.js',
+  'components/Avatar.js',
+  'components/BurgerMenu.js',
+  'components/DefectList.js',
+  'components/Icons.js',
+  'components/ImageInspector.js',
+  'components/InspectionView.js',
+  'components/ProfilePage.js',
+  'components/Toolbar.js',
+  'components/VehicleSelector.js',
 
   // External CDN Dependencies
   'https://cdn.tailwindcss.com',
@@ -38,11 +36,11 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Force the waiting service worker to become the active service worker.
+  self.skipWaiting(); // Force le nouveau service worker à devenir actif immédiatement.
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache ouvert, mise en cache de tous les fichiers...');
+        console.log('Cache ouvert, mise en cache des fichiers pour la PWA...');
         return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' })));
       })
   );
@@ -59,27 +57,28 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    }).then(() => self.clients.claim()) // Take control of all clients as soon as the service worker is activated.
+    }).then(() => self.clients.claim()) // Prend le contrôle de tous les clients ouverts.
   );
 });
 
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
 
-  // Les requêtes à l'API Supabase doivent toujours passer par le réseau.
+  // Les requêtes à l'API Supabase doivent TOUJOURS passer par le réseau, jamais par le cache.
   if (requestUrl.hostname.endsWith('supabase.co')) {
     event.respondWith(fetch(event.request));
     return;
   }
   
+  // Pour toutes les autres requêtes, essayer de répondre depuis le cache d'abord.
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - retourne la réponse du cache
+        // Si la ressource est dans le cache, la retourner.
         if (response) {
           return response;
         }
-        // Pas dans le cache - va chercher sur le réseau, mais ne met pas en cache la réponse.
+        // Sinon, la chercher sur le réseau.
         return fetch(event.request);
       }
     )

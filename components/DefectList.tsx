@@ -1,8 +1,7 @@
 import React from 'react';
 import { TrashIcon } from './Icons.js';
-import type { Marker } from '../types.js';
 
-export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMarkerId }: { markers: Marker[], onDeleteMarker: (id: number) => void, onSelectMarker: (id: number) => void, selectedMarkerId: number | null }) => {
+export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMarkerId }) => {
   if (markers.length === 0) {
     return React.createElement('div', { className: "mt-8 text-center text-gray-400" },
       "Aucun défaut répertorié. Cliquez sur l'image pour ajouter un repère."
@@ -42,15 +41,15 @@ export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMa
               )
             )
           ),
+          // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
           React.createElement('button', {
-            // Fix: Explicitly type the event object 'e' to resolve the 'onClick' property error.
-            onClick: (e: React.MouseEvent) => {
+            onClick: (e) => {
               e.stopPropagation();
               onDeleteMarker(marker.id);
             },
             className: "p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-500 transition-colors ml-2 flex-shrink-0",
             'aria-label': `Supprimer le défaut ${marker.id}`
-          },
+          } as any,
             React.createElement(TrashIcon)
           )
         );

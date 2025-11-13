@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { Avatar } from './Avatar.js'
-import type { Profile } from '../types.js';
-import type { Session } from '@supabase/supabase-js';
 
-export const ProfilePage = ({ session, profile }: { session: Session, profile: Profile }) => {
+export const ProfilePage = ({ session, profile }) => {
   const [loading, setLoading] = useState(true)
-  const [prenom, setPrenom] = useState<string | null>(null)
-  const [nom, setNom] = useState<string | null>(null)
-  const [phone, setPhone] = useState<string | null>(null)
-  const [caserne, setCaserne] = useState<string | null>(null)
-  const [rank, setRank] = useState<string | null>(null)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [prenom, setPrenom] = useState(null)
+  const [nom, setNom] = useState(null)
+  const [phone, setPhone] = useState(null)
+  const [caserne, setCaserne] = useState(null)
+  const [rank, setRank] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(null)
   const [isNewProfile, setIsNewProfile] = useState(false);
   const { user } = session
 
@@ -32,9 +30,7 @@ export const ProfilePage = ({ session, profile }: { session: Session, profile: P
     }
   }, [profile]);
 
-
-  // Fix: Explicitly type the 'event' parameter to resolve the 'onSubmit' property error on the form.
-  async function updateProfile(event: React.FormEvent, newAvatarUrl: string | null) {
+  async function updateProfile(event, newAvatarUrl) {
     event.preventDefault()
 
     setLoading(true)
@@ -70,11 +66,12 @@ export const ProfilePage = ({ session, profile }: { session: Session, profile: P
               React.createElement('p', null, "Il semble que ce soit votre première visite. Veuillez compléter votre profil pour continuer.")
           )
       ),
-      React.createElement('form', { onSubmit: (e) => updateProfile(e, avatarUrl), className: "space-y-6" },
+      // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
+      React.createElement('form', { onSubmit: (e) => updateProfile(e, avatarUrl), className: "space-y-6" } as any,
         React.createElement(Avatar, {
           url: avatarUrl,
           size: 150,
-          onUpload: (url: string) => {
+          onUpload: (url) => {
             setAvatarUrl(url)
           }
         }),

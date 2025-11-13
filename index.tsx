@@ -1,29 +1,20 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './App.js';
 
-// ✅ Rendu principal de l’application
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+// Rendu principal de l’application
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  React.createElement(React.StrictMode, null,
+    React.createElement(App)
+  )
 );
 
-// ✅ Enregistrement du Service Worker uniquement sur les bons domaines
+// L'enregistrement du Service Worker est maintenant géré dans index.html
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const hostname = window.location.hostname;
-
-    if (
-      hostname === 'vocal-gecko-1d05c6.netlify.app' || // ton domaine Netlify
-      hostname === 'localhost' // pour tests locaux
-    ) {
-      navigator.serviceWorker
-        .register('/service-worker.js')
-        .then(reg => console.log('✅ Service Worker enregistré :', reg))
-        .catch(err => console.error('❌ Erreur Service Worker :', err));
-    } else {
-      console.log('🧪 Service Worker désactivé sur cet environnement :', hostname);
-    }
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('✅ Service Worker enregistré :', reg.scope))
+      .catch(err => console.error('❌ Erreur Service Worker :', err));
   });
 }

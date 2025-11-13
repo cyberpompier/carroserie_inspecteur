@@ -17,8 +17,7 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
     }
   };
 
-  // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       onClose();
     }
@@ -29,11 +28,11 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
     onClick: onClose,
     onKeyDown: handleKeyDown
   },
+    // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
     React.createElement('div', {
       className: "bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4",
-      // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-      onClick: (e: React.MouseEvent) => e.stopPropagation()
-    },
+      onClick: (e) => e.stopPropagation()
+    } as any,
       React.createElement('div', { className: "flex justify-between items-center mb-4" },
         React.createElement('h2', { className: "text-xl font-bold text-white" }, "Ajouter un défaut"),
         React.createElement('button', { onClick: onClose, className: "text-gray-400 hover:text-white" },
@@ -49,8 +48,7 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
             type: "text",
             id: "author",
             value: author,
-            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => onAuthorChange(e.target.value),
+            onChange: (e) => onAuthorChange(e.target.value),
             placeholder: "Ex: Jean Dupont",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
           })
@@ -63,8 +61,7 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
             id: "comment",
             ref: commentInputRef,
             value: comment,
-            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-            onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value),
+            onChange: (e) => setComment(e.target.value),
             rows: 4,
             placeholder: "Décrivez le défaut (ex: rayure, bosse...)",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"

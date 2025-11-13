@@ -8,8 +8,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!name.trim() || !caserne.trim()) {
       setError("Le nom et la caserne sont obligatoires.");
@@ -42,8 +41,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
   },
     React.createElement('div', {
       className: "bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4",
-      // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-      onClick: (e: React.MouseEvent) => e.stopPropagation()
+      onClick: (e) => e.stopPropagation()
     },
       React.createElement('div', { className: "flex justify-between items-center mb-4" },
         React.createElement('h2', { className: "text-xl font-bold text-white" }, "Ajouter un véhicule"),
@@ -60,8 +58,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             type: "text",
             id: "vehicle-name",
             value: name,
-            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+            onChange: (e) => setName(e.target.value),
             placeholder: "Ex: FPT 02",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",
             required: true
@@ -75,8 +72,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             type: "text",
             id: "vehicle-caserne",
             value: caserne,
-            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCaserne(e.target.value),
+            onChange: (e) => setCaserne(e.target.value),
             placeholder: "Ex: Caserne Nord",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",
             required: true
@@ -89,11 +85,12 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             onClick: onClose,
             className: "px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors"
           }, "Annuler"),
+          // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
           React.createElement('button', {
             type: "submit",
             disabled: loading,
             className: "px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-          }, loading ? 'Enregistrement...' : 'Enregistrer')
+          } as any, loading ? 'Enregistrement...' : 'Enregistrer')
         )
       )
     )
