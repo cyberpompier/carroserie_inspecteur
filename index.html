@@ -25,7 +25,11 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('service-worker.js').then(registration => {
+          // Utiliser le constructeur URL pour créer un chemin complet et sans ambiguïté vers le service worker.
+          // C'est crucial pour les environnements où la résolution de chemin relatif peut être rompue (par exemple, les iframes).
+          // window.location.href fournit l'URL de base correcte.
+          const swUrl = new URL('service-worker.js', window.location.href);
+          navigator.serviceWorker.register(swUrl).then(registration => {
             console.log('SW registered: ', registration);
           }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
