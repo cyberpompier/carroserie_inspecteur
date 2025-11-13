@@ -62,40 +62,63 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        fetchVehicles();
-        const { data, error } = await supabase
+        try {
+          // Fetch profile
+          const { data, error } = await supabase
             .from('profiles')
             .select(`*`)
             .eq('id', session.user.id)
             .single();
-        
-        if (data) {
+
+          if (error && error.code !== 'PGRST116') {
+            // Throw any error other than "no rows found"
+            throw error;
+          }
+
+          if (data) {
             setUserProfile(data);
-        } else if (error && error.code === 'PGRST116') { // No profile found
+          } else {
+            // Handles both null data and PGRST116 error (no profile found)
             const defaultProfile: Profile = {
-                id: session.user.id,
-                prenom: null,
-                nom: null,
-                phone: null,
-                caserne: null,
-                rank: null,
-                avatarUrl: null,
-                role: null,
+              id: session.user.id,
+              prenom: null,
+              nom: null,
+              phone: null,
+              caserne: null,
+              rank: null,
+              avatarUrl: null,
+              role: null,
             };
             setUserProfile(defaultProfile);
-        } else if (error) {
-            console.warn("Erreur lors de la récupération du profil:", error);
+          }
+          
+          // Fetch vehicles after successfully setting profile
+          await fetchVehicles();
+
+        } catch (error: any) {
+          console.error("Erreur critique lors de la récupération du profil:", error);
+          setAppError(`Impossible de charger le profil utilisateur: ${error.message}. L'application est peut-être inutilisable.`);
+          // IMPORTANT: Set a default profile even on error to unblock the UI.
+          // The error message banner will inform the user of the problem.
+          const defaultProfile: Profile = {
+            id: session.user.id,
+            prenom: null,
+            nom: null,
+            phone: null,
+            caserne: null,
+            rank: null,
+            avatarUrl: null,
+            role: null,
+          };
+          setUserProfile(defaultProfile);
         }
       } else {
+        // User is logged out, clear all user-specific state
         setUserProfile(null);
         setVehicles([]);
         setInspections({});
@@ -104,6 +127,7 @@ const App: React.FC = () => {
 
     return () => subscription.unsubscribe();
   }, [fetchVehicles]);
+
 
   useEffect(() => {
     if (userProfile?.caserne) {
