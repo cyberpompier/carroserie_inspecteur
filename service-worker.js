@@ -1,48 +1,51 @@
-const CACHE_NAME = 'carrosserie-inspecteur-v3';
-// All local files + external dependencies
+const CACHE_NAME = 'carrosserie-inspecteur-v4';
+
+// Déterminer le chemin de base à partir de l'emplacement du service worker lui-même
+// C'est la méthode la plus fiable pour résoudre les chemins relatifs.
+const base = new URL('.', self.location.href);
+const resolve = (path) => new URL(path, base).href;
+
 const urlsToCache = [
-  // Core files
-  '.',
-  'index.html',
-  'manifest.json',
+  // Core files - résolus en URL absolues
+  resolve('.'),
+  resolve('index.html'),
+  resolve('manifest.json'),
 
-  // Source code files
-  'index.tsx',
-  'App.tsx',
-  'types.ts',
-  'lib/supabase.ts',
-  'components/AddDefectModal.tsx',
-  'components/AddVehicleModal.tsx',
-  'components/Auth.tsx',
-  'components/Avatar.tsx',
-  'components/BurgerMenu.tsx',
-  'components/DefectList.tsx',
-  'components/Icons.tsx',
-  'components/ImageInspector.tsx',
-  'components/InspectionView.tsx',
-  'components/ProfilePage.tsx',
-  'components/Toolbar.tsx',
-  'components/VehicleSelector.tsx',
+  // Source code files - résolus en URL absolues
+  resolve('index.tsx'),
+  resolve('App.tsx'),
+  resolve('types.ts'),
+  resolve('lib/supabase.ts'),
+  resolve('components/AddDefectModal.tsx'),
+  resolve('components/AddVehicleModal.tsx'),
+  resolve('components/Auth.tsx'),
+  resolve('components/Avatar.tsx'),
+  resolve('components/BurgerMenu.tsx'),
+  resolve('components/DefectList.tsx'),
+  resolve('components/Icons.tsx'),
+  resolve('components/ImageInspector.tsx'),
+  resolve('components/InspectionView.tsx'),
+  resolve('components/ProfilePage.tsx'),
+  resolve('components/Toolbar.tsx'),
+  resolve('components/VehicleSelector.tsx'),
 
-  // External CDN Dependencies
+  // External CDN Dependencies (déjà absolues)
   'https://cdn.tailwindcss.com',
   'https://aistudiocdn.com/react@^19.2.0',
-  'https://aistudiocdn.com/react-dom@^19.2.0/client', // For React 18+ with createRoot
+  'https://aistudiocdn.com/react-dom@^19.2.0/client',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
 
-  // Icons (from the updated manifest)
+  // Icons (déjà absolues)
   'https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-192.png',
   'https://storage.googleapis.com/aistudio-ux-public-assets/codelab-helper/fire-inspector-512.png'
 ];
 
 self.addEventListener('install', event => {
-  // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache, caching all files...');
-        // Using addAll, if any request fails, the entire operation fails.
-        return cache.addAll(urlsToCache);
+        console.log('Cache ouvert, mise en cache de tous les fichiers...');
+        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' })));
       })
   );
 });
@@ -52,9 +55,8 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Delete all caches that aren't the current one.
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+            console.log('Suppression de l\'ancien cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -64,8 +66,10 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Requests to Supabase API should always go to the network.
-  if (event.request.url.includes('supabase.co')) {
+  const requestUrl = new URL(event.request.url);
+
+  // Les requêtes à l'API Supabase doivent toujours passer par le réseau.
+  if (requestUrl.hostname.endsWith('supabase.co')) {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -73,11 +77,11 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - return response
+        // Cache hit - retourne la réponse du cache
         if (response) {
           return response;
         }
-        // Not in cache - fetch from network
+        // Pas dans le cache - va chercher sur le réseau
         return fetch(event.request);
       }
     )

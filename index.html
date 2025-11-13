@@ -25,14 +25,22 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Utiliser `document.baseURI` car c'est plus fiable que `window.location.href` dans des contextes complexes
-          // comme les iframes, où `href` peut ne pas être une URL de base valide.
-          const swUrl = new URL('service-worker.js', document.baseURI);
-          navigator.serviceWorker.register(swUrl).then(registration => {
-            console.log('SW registered: ', registration);
-          }).catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
-          });
+          // Utiliser l'URL du script module comme base fiable pour éviter les problèmes d'origine dans les iframes.
+          const moduleScript = document.querySelector('script[type="module"][src*="index.tsx"]');
+          if (moduleScript) {
+            const base = new URL('.', moduleScript.src);
+            const swUrl = new URL('service-worker.js', base);
+            
+            navigator.serviceWorker.register(swUrl)
+              .then(registration => {
+                console.log('SW registered with URL:', swUrl.href, registration);
+              })
+              .catch(registrationError => {
+                console.log('SW registration failed for URL:', swUrl.href, registrationError);
+              });
+          } else {
+            console.error("Impossible de trouver le script de l'application pour enregistrer le Service Worker.");
+          }
         });
       }
     </script>
