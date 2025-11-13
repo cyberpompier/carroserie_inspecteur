@@ -1,0 +1,5 @@
+{
+  "name": "Carrosserie Inspecteur",
+  "description": "Une application PWA pour inspecter la carrosserie des camions de pompiers, permettant de placer des repères visuels sur les photos pour identifier les impacts et défauts.",
+  "requestFramePermissions": []
+}
