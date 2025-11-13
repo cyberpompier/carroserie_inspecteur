@@ -22,7 +22,10 @@
     }
     </script>
   </head>
-
+<script>
+  if ('serviceWorker' in navigator)
+    navigator.serviceWorker.register('/service-worker.js');
+</script>
   <body class="bg-gray-900 text-white">
     <div id="root"></div>
 
