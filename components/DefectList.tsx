@@ -1,7 +1,8 @@
 import React from 'react';
 import { TrashIcon } from './Icons.js';
+import type { Marker } from '../types.js';
 
-export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMarkerId }) => {
+export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMarkerId }: { markers: Marker[], onDeleteMarker: (id: number) => void, onSelectMarker: (id: number) => void, selectedMarkerId: number | null }) => {
   if (markers.length === 0) {
     return React.createElement('div', { className: "mt-8 text-center text-gray-400" },
       "Aucun défaut répertorié. Cliquez sur l'image pour ajouter un repère."
@@ -42,7 +43,7 @@ export const DefectList = ({ markers, onDeleteMarker, onSelectMarker, selectedMa
             )
           ),
           React.createElement('button', {
-            // FIX: Explicitly type the event object in the onClick handler to resolve overload ambiguity for React.createElement.
+            // Fix: Explicitly type the event object 'e' to resolve the 'onClick' property error.
             onClick: (e: React.MouseEvent) => {
               e.stopPropagation();
               onDeleteMarker(marker.id);

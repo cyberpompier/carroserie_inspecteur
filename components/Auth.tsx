@@ -61,7 +61,7 @@ export const Auth = () => {
           })
         ),
         React.createElement('div', null,
-          React.createElement('label', { htmlFor: "password" }, "Mot de passe"),
+          React.createElement('label', { htmlFor: "password", className: "block text-sm font-medium text-gray-300" }, "Mot de passe"),
           React.createElement('input', {
             id: "password",
             className: "w-full px-3 py-2 mt-1 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring focus:ring-red-500",

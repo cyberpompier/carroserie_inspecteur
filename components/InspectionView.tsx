@@ -4,6 +4,8 @@ import { DefectList } from './DefectList.js';
 import { Toolbar } from './Toolbar.js';
 import { AddDefectModal } from './AddDefectModal.js';
 import { supabase } from '../lib/supabase.js';
+// Fix: Import types for props
+import type { Vehicle, InspectionData, Marker } from '../types.js';
 
 const FACES = [
     { key: 'front', label: 'Avant' },
@@ -12,15 +14,24 @@ const FACES = [
     { key: 'right', label: 'Côté Droit' },
 ];
 
-export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData, onUpdateInspection }) => {
-  const [currentFace, setCurrentFace] = useState('front');
+// Fix: Define interface for component props
+interface InspectionViewProps {
+  vehicle: Vehicle;
+  userId: string;
+  inspectorName: string;
+  inspectionData: InspectionData;
+  onUpdateInspection: (id: number, data: InspectionData) => void;
+}
+
+export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData, onUpdateInspection }: InspectionViewProps) => {
+  const [currentFace, setCurrentFace] = useState<keyof InspectionData['markers']>('front');
   const [isUploading, setIsUploading] = useState(false);
   const [pendingMarker, setPendingMarker] = useState(null);
   const [authorName, setAuthorName] = useState(inspectorName || '');
-  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+  const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null);
   
-  // FIX: Explicitly type the initial value of reduce to `any[]` to avoid type inference issues with `concat` and `map` later on.
-  const allMarkers = Object.values(inspectionData.markers).reduce((acc, val) => acc.concat(val), [] as any[]);
+  // Fix: Use .flat() to correctly create and type the allMarkers array. This resolves errors on lines 22 and 23.
+  const allMarkers = Object.values(inspectionData.markers).flat();
   const nextId = useRef(Math.max(0, ...allMarkers.map(m => m.id)) + 1);
   const fileInputRef = useRef(null);
   const uploadTargetFace = useRef('front');
@@ -29,7 +40,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
     setSelectedMarkerId(null);
   }, [currentFace]);
 
-  const handleImageUpload = async (event) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) {
       return;
     }
@@ -64,23 +75,23 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
       setSelectedMarkerId(null);
 
     } catch (error) {
-      alert(error.message);
+      alert((error as Error).message);
     } finally {
       setIsUploading(false);
       if (event.target) event.target.value = '';
     }
   };
 
-  const handleAddMarkerClick = useCallback((x, y) => {
+  const handleAddMarkerClick = useCallback((x: number, y: number) => {
     setSelectedMarkerId(null);
     setPendingMarker({ x, y });
   }, []);
 
-  const handleSaveDefect = (comment, author) => {
+  const handleSaveDefect = (comment: string, author: string) => {
     if (!pendingMarker) return;
 
     setAuthorName(author);
-    const newMarker = {
+    const newMarker: Marker = {
       id: nextId.current++,
       x: pendingMarker.x,
       y: pendingMarker.y,
@@ -104,7 +115,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
     setPendingMarker(null);
   };
 
-  const handleDeleteMarker = useCallback((id) => {
+  const handleDeleteMarker = useCallback((id: number) => {
     const newInspectionData = {
         ...inspectionData,
         markers: {
@@ -119,12 +130,12 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
     }
   }, [currentFace, selectedMarkerId, inspectionData, onUpdateInspection, vehicle.id]);
   
-  const triggerFileUpload = (face) => {
+  const triggerFileUpload = (face: string) => {
     uploadTargetFace.current = face;
     fileInputRef.current?.click();
   };
   
-  const handleSelectMarker = useCallback((id) => {
+  const handleSelectMarker = useCallback((id: number) => {
     setSelectedMarkerId(prevId => (prevId === id ? null : id));
   }, []);
 
@@ -170,7 +181,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
             FACES.map(face => (
               React.createElement('button', {
                 key: face.key,
-                onClick: () => setCurrentFace(face.key),
+                onClick: () => setCurrentFace(face.key as keyof InspectionData['markers']),
                 className: `flex-1 text-sm font-semibold py-2 rounded-md transition-colors focus:outline-none ${
                   currentFace === face.key
                     ? 'bg-red-600 text-white'

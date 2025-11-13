@@ -17,7 +17,8 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
     }
   };
 
-  const handleKeyDown = (e) => {
+  // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
     }
@@ -30,7 +31,8 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
   },
     React.createElement('div', {
       className: "bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4",
-      onClick: e => e.stopPropagation()
+      // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+      onClick: (e: React.MouseEvent) => e.stopPropagation()
     },
       React.createElement('div', { className: "flex justify-between items-center mb-4" },
         React.createElement('h2', { className: "text-xl font-bold text-white" }, "Ajouter un défaut"),
@@ -47,7 +49,8 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
             type: "text",
             id: "author",
             value: author,
-            onChange: (e) => onAuthorChange(e.target.value),
+            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => onAuthorChange(e.target.value),
             placeholder: "Ex: Jean Dupont",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
           })
@@ -60,7 +63,7 @@ export const AddDefectModal = ({ author, onAuthorChange, onSave, onClose }) => {
             id: "comment",
             ref: commentInputRef,
             value: comment,
-            // FIX: Explicitly type the event object in the onChange handler to resolve overload ambiguity for React.createElement.
+            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
             onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value),
             rows: 4,
             placeholder: "Décrivez le défaut (ex: rayure, bosse...)",

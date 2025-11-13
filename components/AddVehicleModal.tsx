@@ -8,7 +8,8 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSave = async (e) => {
+  // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !caserne.trim()) {
       setError("Le nom et la caserne sont obligatoires.");
@@ -41,7 +42,8 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
   },
     React.createElement('div', {
       className: "bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4",
-      onClick: e => e.stopPropagation()
+      // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+      onClick: (e: React.MouseEvent) => e.stopPropagation()
     },
       React.createElement('div', { className: "flex justify-between items-center mb-4" },
         React.createElement('h2', { className: "text-xl font-bold text-white" }, "Ajouter un véhicule"),
@@ -58,7 +60,8 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             type: "text",
             id: "vehicle-name",
             value: name,
-            onChange: (e) => setName(e.target.value),
+            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
             placeholder: "Ex: FPT 02",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",
             required: true
@@ -72,7 +75,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             type: "text",
             id: "vehicle-caserne",
             value: caserne,
-            // FIX: Explicitly type the event object in the onChange handler to resolve overload ambiguity for React.createElement.
+            // Fix: Explicitly type the event object 'e' to avoid type inference errors.
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCaserne(e.target.value),
             placeholder: "Ex: Caserne Nord",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carrosserie-inspecteur-v5';
+const CACHE_NAME = 'carrosserie-inspecteur-v6';
 
 const base = new URL('.', self.location.href);
 const resolve = (path) => new URL(path, base).href;
@@ -30,8 +30,6 @@ const urlsToCache = [
   'https://cdn.tailwindcss.com',
   'https://aistudiocdn.com/react@^19.2.0',
   'https://aistudiocdn.com/react-dom@^19.2.0/client',
-  'https://aistudiocdn.com/react@^19.2.0/',
-  'https://aistudiocdn.com/react-dom@^19.2.0/',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
 
   // Icons
@@ -45,7 +43,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache ouvert, mise en cache de tous les fichiers...');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache.map(url => new Request(url, { cache: 'reload' })));
       })
   );
 });
@@ -81,7 +79,7 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        // Pas dans le cache - va chercher sur le réseau
+        // Pas dans le cache - va chercher sur le réseau, mais ne met pas en cache la réponse.
         return fetch(event.request);
       }
     )
