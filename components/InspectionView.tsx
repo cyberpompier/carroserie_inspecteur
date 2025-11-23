@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ImageInspector } from './ImageInspector.js';
 import { DefectList } from './DefectList.js';
@@ -20,8 +21,8 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
   const [selectedMarkerId, setSelectedMarkerId] = useState(null);
   
   const allMarkers = Object.values(inspectionData.markers).flat();
-  // FIX: Add type assertion to fix 'm' being of type 'unknown'.
-  const nextId = useRef(Math.max(0, ...allMarkers.map(m => (m as { id: number }).id)) + 1);
+  // @ts-ignore
+  const nextId = useRef(Math.max(0, ...allMarkers.map(m => m.id)) + 1);
   const fileInputRef = useRef(null);
   const uploadTargetFace = useRef('front');
   
@@ -35,7 +36,10 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
     }
     const file = event.target.files[0];
     const fileExt = file.name.split('.').pop();
-    const filePath = `${userId}/${vehicle.id}/${uploadTargetFace.current}.${fileExt}`;
+    
+    // CHANGEMENT: Utilisation d'un chemin commun "vehicles/ID_VEHICULE" 
+    // pour que tous les utilisateurs voient la même image du véhicule.
+    const filePath = `vehicles/${vehicle.id}/${uploadTargetFace.current}.${fileExt}`;
 
     setIsUploading(true);
 
@@ -56,7 +60,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
           ...inspectionData,
           images: {
             ...inspectionData.images,
-            [uploadTargetFace.current]: data.path,
+            [uploadTargetFace.current]: data.path, // Le chemin stocké est relatif au bucket
           },
         };
         onUpdateInspection(vehicle.id, newInspectionData);
@@ -64,7 +68,8 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
       setSelectedMarkerId(null);
 
     } catch (error) {
-      alert(error.message);
+      console.error("Erreur d'upload:", error);
+      alert("Erreur lors du téléchargement de l'image: " + error.message);
     } finally {
       setIsUploading(false);
       if (event.target) event.target.value = '';
@@ -109,6 +114,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
         ...inspectionData,
         markers: {
             ...inspectionData.markers,
+            // @ts-ignore
             [currentFace]: inspectionData.markers[currentFace].filter(m => m.id !== id)
         }
     };
@@ -130,12 +136,13 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
 
   const imagePath = inspectionData.images[currentFace];
   const markers = inspectionData.markers[currentFace];
+  // @ts-ignore
   const selectedMarker = markers.find(m => m.id === selectedMarkerId) || null;
 
   return React.createElement(React.Fragment, null,
     React.createElement('div', { className: "flex-1 flex flex-col lg:flex-row overflow-hidden" },
       React.createElement('main', { className: "flex-1 flex flex-col bg-gray-900 p-4" },
-        React.createElement('div', { className: "flex-1 relative border-2 border-dashed border-gray-600 rounded-lg overflow-hidden" },
+        React.createElement('div', { className: "flex-1 relative border-2 border-dashed border-gray-600 rounded-lg overflow-hidden bg-black" },
           React.createElement(ImageInspector, {
             imagePath: imagePath,
             markers: markers,
@@ -144,55 +151,67 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
             onSelectMarker: handleSelectMarker
           }),
           !imagePath && !isUploading && (
-            React.createElement('div', { className: "absolute inset-0 flex flex-col items-center justify-center bg-gray-800 bg-opacity-75" },
-              React.createElement('p', { className: "text-lg mb-4 text-center" },
-                "Chargez une photo pour la face ", React.createElement('span', { className: "font-bold uppercase" }, FACES.find(f => f.key === currentFace)?.label),
-                React.createElement('br'),
-                "du véhicule ", React.createElement('span', { className: "font-bold" }, vehicle.name), "."
-              ),
-              React.createElement('button', {
-                onClick: () => triggerFileUpload(currentFace),
-                className: "px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors"
-              }, "Charger une Image")
+            React.createElement('div', { className: "absolute inset-0 flex flex-col items-center justify-center bg-gray-800 bg-opacity-90 p-4 text-center" },
+              React.createElement('div', { className: "max-w-md" },
+                  React.createElement('p', { className: "text-xl mb-6 text-gray-200" },
+                    "Aucune photo pour la face ", 
+                    React.createElement('span', { className: "font-bold text-red-400 uppercase" }, FACES.find(f => f.key === currentFace)?.label),
+                    React.createElement('br'),
+                    "du véhicule ", React.createElement('span', { className: "font-bold text-white" }, vehicle.name)
+                  ),
+                  React.createElement('button', {
+                    onClick: () => triggerFileUpload(currentFace),
+                    className: "px-6 py-3 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-transform transform hover:scale-105"
+                  }, "Prendre / Charger une photo")
+              )
             )
           ),
           isUploading && (
-            React.createElement('div', { className: "absolute inset-0 flex flex-col items-center justify-center bg-gray-800 bg-opacity-75" },
-              React.createElement('p', { className: "text-lg mb-4" }, "Téléversement en cours...")
+            React.createElement('div', { className: "absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 z-20" },
+              React.createElement('div', { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4" }),
+              React.createElement('p', { className: "text-lg text-white font-semibold" }, "Téléversement en cours...")
             )
           )
         )
       ),
-      React.createElement('aside', { className: "w-full lg:w-96 bg-gray-800 p-4 flex flex-col lg:h-full overflow-y-auto" },
+      React.createElement('aside', { className: "w-full lg:w-96 bg-gray-800 p-4 flex flex-col lg:h-full lg:border-l border-gray-700 overflow-y-auto" },
         React.createElement('div', { className: "flex-1" },
-          React.createElement('h2', { className: "text-lg font-semibold mb-4 border-b border-gray-600 pb-2" }, "Contrôles & Défauts"),
-          React.createElement('div', { className: "flex space-x-1 mb-4 p-1 bg-gray-900 rounded-lg" },
+          React.createElement('h2', { className: "text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-white flex justify-between items-center" }, 
+            "Contrôles & Défauts",
+            React.createElement('span', { className: "text-xs font-normal text-gray-400 bg-gray-700 px-2 py-1 rounded" }, vehicle.name)
+          ),
+          
+          // Face Selector
+          React.createElement('div', { className: "grid grid-cols-2 gap-2 mb-6" },
             FACES.map(face => (
               React.createElement('button', {
                 key: face.key,
                 onClick: () => setCurrentFace(face.key),
-                className: `flex-1 text-sm font-semibold py-2 rounded-md transition-colors focus:outline-none ${
+                className: `text-sm font-semibold py-2 px-3 rounded-md transition-all duration-200 border ${
                   currentFace === face.key
-                    ? 'bg-red-600 text-white'
-                    : 'bg-transparent text-gray-300 hover:bg-gray-700'
+                    ? 'bg-red-600 border-red-600 text-white shadow-md'
+                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
                 }`
               }, face.label)
             ))
           ),
+
           React.createElement(Toolbar, { onUploadClick: () => triggerFileUpload(currentFace) }),
-          React.createElement('div', { className: "mt-4" },
-            React.createElement('label', { htmlFor: "author-sidebar", className: "block text-sm font-medium text-gray-300 mb-1" },
-              "Nom de l'inspecteur"
+          
+          React.createElement('div', { className: "mt-6 mb-4" },
+            React.createElement('label', { htmlFor: "author-sidebar", className: "block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1" },
+              "Inspecteur"
             ),
             React.createElement('input', {
               type: "text",
               id: "author-sidebar",
               value: authorName,
               onChange: (e) => setAuthorName(e.target.value),
-              placeholder: "Ex: Jean Dupont",
-              className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500"
+              placeholder: "Votre nom...",
+              className: "w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
             })
           ),
+          
           React.createElement(DefectList, {
             markers: markers,
             onDeleteMarker: handleDeleteMarker,

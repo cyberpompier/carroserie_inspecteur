@@ -38,21 +38,21 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
   return React.createElement('div', {
     className: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
     onClick: onClose
-  },
+  } as any,
     React.createElement('div', {
       className: "bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4",
       onClick: (e) => e.stopPropagation()
-    },
+    } as any,
       React.createElement('div', { className: "flex justify-between items-center mb-4" },
         React.createElement('h2', { className: "text-xl font-bold text-white" }, "Ajouter un véhicule"),
-        React.createElement('button', { onClick: onClose, className: "text-gray-400 hover:text-white" },
+        React.createElement('button', { onClick: onClose, className: "text-gray-400 hover:text-white" } as any,
           React.createElement(XIcon)
         )
       ),
       // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
       React.createElement('form', { onSubmit: handleSave, className: "space-y-4" } as any,
         React.createElement('div', null,
-          React.createElement('label', { htmlFor: "vehicle-name", className: "block text-sm font-medium text-gray-300 mb-1" },
+          React.createElement('label', { htmlFor: "vehicle-name", className: "block text-sm font-medium text-gray-300 mb-1" } as any,
             "Nom du véhicule"
           ),
           React.createElement('input', {
@@ -63,10 +63,10 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             placeholder: "Ex: FPT 02",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",
             required: true
-          })
+          } as any)
         ),
         React.createElement('div', null,
-          React.createElement('label', { htmlFor: "vehicle-caserne", className: "block text-sm font-medium text-gray-300 mb-1" },
+          React.createElement('label', { htmlFor: "vehicle-caserne", className: "block text-sm font-medium text-gray-300 mb-1" } as any,
             "Caserne"
           ),
           React.createElement('input', {
@@ -77,7 +77,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             placeholder: "Ex: Caserne Nord",
             className: "w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-red-500 focus:border-red-500",
             required: true
-          })
+          } as any)
         ),
         error && React.createElement('p', { className: "text-sm text-red-400" }, error),
         React.createElement('div', { className: "mt-6 flex justify-end space-x-3" },
@@ -85,7 +85,7 @@ export const AddVehicleModal = ({ onClose, onVehicleAdded }) => {
             type: "button",
             onClick: onClose,
             className: "px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors"
-          }, "Annuler"),
+          } as any, "Annuler"),
           // FIX: Add 'as any' to props to bypass TS error on intrinsic element attributes.
           React.createElement('button', {
             type: "submit",

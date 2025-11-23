@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { VehicleSelector } from './components/VehicleSelector.js';
 import { InspectionView } from './components/InspectionView.js';
@@ -7,18 +8,20 @@ import { supabase } from './lib/supabase.js';
 import { BurgerMenu } from './components/BurgerMenu.js';
 import { ProfilePage } from './components/ProfilePage.js';
 import { AddVehicleModal } from './components/AddVehicleModal.js';
+import { InspectionData, UserProfile, Vehicle } from './types.js';
 
 const App = () => {
   const [session, setSession] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
-  const [filteredVehicles, setFilteredVehicles] = useState([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
-  const [inspections, setInspections] = useState({});
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [inspections, setInspections] = useState<Record<string, InspectionData>>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('inspection');
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
-  const [appError, setAppError] = useState(null);
+  const [appError, setAppError] = useState<string | null>(null);
+  const [isLoadingInspection, setIsLoadingInspection] = useState(false);
 
   const fetchVehicles = useCallback(async () => {
     setAppError(null);
@@ -31,31 +34,40 @@ const App = () => {
     }
   }, []);
 
-  const fetchInspections = useCallback(async (vehicleIds) => {
-    if (vehicleIds.length === 0) {
-      setInspections({});
-      return;
-    }
+  // Cette fonction charge l'inspection pour un véhicule spécifique uniquement
+  const fetchInspectionForVehicle = useCallback(async (vehicleId: string) => {
+    // Si on a déjà les données en mémoire, on ne recharge pas (sauf si on voulait forcer un refresh)
+    if (inspections[vehicleId]) return;
+
+    setIsLoadingInspection(true);
     const { data, error } = await supabase
       .from('inspections')
-      .select('vehicle_id, data')
-      .in('vehicle_id', vehicleIds);
+      .select('data')
+      .eq('vehicle_id', vehicleId)
+      .maybeSingle(); // maybeSingle évite une erreur si pas de ligne
+
+    setIsLoadingInspection(false);
 
     if (error) {
-      console.error("Erreur lors de la récupération des inspections:", error);
-      if (error.code === '42P01') {
-        setAppError("Erreur de configuration : La table 'inspections' est manquante dans la base de données. Les données d'inspection ne peuvent pas être chargées ou sauvegardées.");
-      } else {
-        setAppError(`Erreur lors de la récupération des inspections: ${error.message}`);
-      }
-    } else if (data) {
-      const inspectionsData = data.reduce((acc, inspection) => {
-        acc[inspection.vehicle_id] = inspection.data;
-        return acc;
-      }, {});
-      setInspections(inspectionsData);
+        // Ignorer l'erreur 42P01 (table inexistante) pour éviter de bloquer l'UI si la DB est vide
+        if (error.code !== '42P01') {
+            console.error("Erreur lors de la récupération de l'inspection:", error);
+            setAppError(`Erreur lors du chargement de l'inspection: ${error.message}`);
+        }
     }
-  }, []);
+
+    // Initialisation par défaut si pas de données ou erreur
+    const inspectionData: InspectionData = data?.data || {
+        images: { front: null, back: null, left: null, right: null },
+        markers: { front: [], back: [], left: [], right: [] }
+    };
+
+    setInspections(prev => ({
+        ...prev,
+        [vehicleId]: inspectionData
+    }));
+
+  }, [inspections]);
 
   useEffect(() => {
     const {
@@ -64,22 +76,18 @@ const App = () => {
       setSession(session);
       if (session) {
         try {
-          // Fetch profile
           const { data, error } = await supabase
             .from('profiles')
             .select(`*`)
             .eq('id', session.user.id)
             .single();
 
-          if (error && error.code !== 'PGRST116') {
-            // Throw any error other than "no rows found"
-            throw error;
-          }
+          if (error && error.code !== 'PGRST116') throw error;
 
           if (data) {
-            setUserProfile(data);
+            setUserProfile(data as UserProfile);
           } else {
-            const defaultProfile = {
+            const defaultProfile: UserProfile = {
               id: session.user.id,
               prenom: null,
               nom: null,
@@ -95,19 +103,12 @@ const App = () => {
           await fetchVehicles();
 
         } catch (error) {
-          console.error("Erreur critique lors de la récupération du profil:", error);
-          setAppError(`Impossible de charger le profil utilisateur: ${error.message}. L'application est peut-être inutilisable.`);
-          const defaultProfile = {
-            id: session.user.id,
-            prenom: null,
-            nom: null,
-            phone: null,
-            caserne: null,
-            rank: null,
-            avatarUrl: null,
-            role: null,
-          };
-          setUserProfile(defaultProfile);
+          console.error("Erreur critique:", error);
+          setAppError(`Impossible de charger le profil: ${error.message}`);
+          // Fallback profile
+          setUserProfile({
+             id: session.user.id, prenom: null, nom: null, phone: null, caserne: null, rank: null, avatarUrl: null, role: null
+          });
         }
       } else {
         setUserProfile(null);
@@ -124,27 +125,16 @@ const App = () => {
     if (userProfile?.caserne) {
       const caserneVehicles = vehicles.filter(v => v.caserne === userProfile.caserne);
       setFilteredVehicles(caserneVehicles);
-      const vehicleIds = caserneVehicles.map(v => v.id);
-      fetchInspections(vehicleIds);
     } else {
       setFilteredVehicles([]);
-      setInspections({});
     }
-  }, [userProfile, vehicles, fetchInspections]);
+  }, [userProfile, vehicles]);
 
 
-  const handleSelectVehicle = useCallback((id) => {
+  const handleSelectVehicle = useCallback(async (id: string) => {
     setSelectedVehicleId(id);
-    if (!inspections[id]) {
-      setInspections(prev => ({
-        ...prev,
-        [id]: { 
-          images: { front: null, back: null, left: null, right: null },
-          markers: { front: [], back: [], left: [], right: [] }
-        }
-      }));
-    }
-  }, [inspections]);
+    await fetchInspectionForVehicle(id);
+  }, [fetchInspectionForVehicle]);
 
   const handleGoBackToVehicles = () => {
     setSelectedVehicleId(null);
@@ -155,17 +145,15 @@ const App = () => {
     await supabase.auth.signOut();
   };
 
-  const handleUpdateInspection = async (id, data) => {
+  const handleUpdateInspection = async (id: string, data: InspectionData) => {
+    // Mise à jour optimiste de l'état local
     setInspections(prev => ({
       ...prev,
       [id]: data,
     }));
 
     if (!session) {
-      const errorMessage = "Votre session a expiré. Impossible de sauvegarder.";
-      console.error(errorMessage);
-      setAppError(errorMessage);
-      alert(errorMessage);
+      setAppError("Session expirée.");
       return;
     }
 
@@ -178,10 +166,8 @@ const App = () => {
       }, { onConflict: 'vehicle_id' });
 
     if (error) {
-      console.error("Erreur lors de la sauvegarde de l'inspection:", error);
-      const userMessage = "La sauvegarde de l'inspection a échoué. Veuillez vérifier votre connexion et réessayer.";
-      setAppError(userMessage);
-      alert(userMessage);
+      console.error("Erreur sauvegarde:", error);
+      setAppError("Échec de la sauvegarde. Vérifiez votre connexion.");
     } else {
       setAppError(null);
     }
@@ -202,7 +188,7 @@ const App = () => {
 
   if (!userProfile) {
     return React.createElement('div', { className: "flex items-center justify-center h-screen bg-gray-900 text-white" },
-      React.createElement('div', { className: "text-xl" }, "Chargement...")
+      React.createElement('div', { className: "text-xl animate-pulse" }, "Chargement du profil...")
     );
   }
   
@@ -220,16 +206,22 @@ const App = () => {
             );
         case 'inspection':
         default:
-            return !selectedVehicle ? (
-                React.createElement(VehicleSelector, {
+            if (!selectedVehicle) {
+                return React.createElement(VehicleSelector, {
                   vehicles: filteredVehicles,
                   onSelectVehicle: handleSelectVehicle,
                   userStation: userProfile?.caserne || null,
                   userRole: userProfile?.role || null,
                   onAddVehicleClick: () => setIsAddVehicleModalOpen(true)
-                })
-            ) : (
-                React.createElement(InspectionView, {
+                });
+            } else {
+                if (isLoadingInspection && !inspections[selectedVehicle.id]) {
+                     return React.createElement('div', { className: "flex items-center justify-center h-full" },
+                        React.createElement('div', { className: "text-red-500 text-xl font-bold animate-pulse" }, "Chargement de l'inspection...")
+                     );
+                }
+                
+                return React.createElement(InspectionView, {
                   key: selectedVehicle.id,
                   vehicle: selectedVehicle,
                   userId: session.user.id,
@@ -239,8 +231,8 @@ const App = () => {
                       markers: { front: [], back: [], left: [], right: [] }
                   },
                   onUpdateInspection: handleUpdateInspection
-                })
-            );
+                });
+            }
     }
   }
 
@@ -261,7 +253,7 @@ const App = () => {
           React.createElement(ChevronLeftIcon)
         )
       ),
-      React.createElement('h1', { className: "text-xl font-bold text-red-500 text-center absolute left-1/2 -translate-x-1/2" },
+      React.createElement('h1', { className: "text-xl font-bold text-red-500 text-center absolute left-1/2 -translate-x-1/2 truncate max-w-[50%]" },
         currentPage === 'profile' ? 'Mon Profil' : 
          selectedVehicle ? `Inspection: ${selectedVehicle.name}` : 'Carrosserie Inspecteur'
       ),

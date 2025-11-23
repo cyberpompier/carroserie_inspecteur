@@ -240,41 +240,53 @@ export const ImageInspector = ({ imagePath, markers, onAddMarker, selectedMarker
 
   const handleInteractionEnd = useCallback((e) => {
     if (!isInteracting.current) return;
-    
+  
+    // For touch, if fingers remain, we might be transitioning from pinch to pan.
+    if (e.touches && e.touches.length > 0) {
+      if (e.touches.length === 1) {
+        // Switch to panning with the remaining finger
+        const touch = e.touches[0];
+        interactionStart.current = { clientX: touch.clientX, clientY: touch.clientY };
+        pinchStart.current = { distance: 0, transform: { scale: 1, offsetX: 0, offsetY: 0 } };
+      }
+      return; // Keep interacting
+    }
+  
+    // This logic runs only when the interaction truly ends (last finger or mouse up)
     const touchOrMouse = e.changedTouches ? e.changedTouches[0] : e;
     const dx = touchOrMouse.clientX - interactionStart.current.clientX;
     const dy = touchOrMouse.clientY - interactionStart.current.clientY;
-    
+  
     isInteracting.current = false;
-
+  
     if (Math.abs(dx) < 5 && Math.abs(dy) < 5) { // It's a tap/click
       const now = Date.now();
       if (now - lastTap.current < DOUBLE_TAP_DELAY) {
         if (canvasRef.current && imageRef.current) {
-            resetTransform(canvasRef.current, imageRef.current);
+          resetTransform(canvasRef.current, imageRef.current);
         }
       } else {
         const { x, y } = getCanvasCoords(touchOrMouse);
         const imageX = (x - transform.offsetX) / transform.scale;
         const imageY = (y - transform.offsetY) / transform.scale;
-        
+  
         const clickedMarker = markers.find(marker => {
           const distance = Math.sqrt(Math.pow(marker.x - imageX, 2) + Math.pow(marker.y - imageY, 2));
           return distance < (MARKER_RADIUS / transform.scale);
         });
-
+  
         if (clickedMarker) {
           onSelectMarker(clickedMarker.id);
-        } else if (imageRef.current && imageX >= 0 && imageX <= imageRef.current.width && imageY >=0 && imageY <= imageRef.current.height){
+        } else if (imageRef.current && imageX >= 0 && imageX <= imageRef.current.width && imageY >= 0 && imageY <= imageRef.current.height) {
           onAddMarker(imageX, imageY);
         }
       }
       lastTap.current = now;
     }
-
-    if (e.touches && e.touches.length < 2) {
-      pinchStart.current = { distance: 0, transform: { scale: 1, offsetX: 0, offsetY: 0 } };
-    }
+  
+    // Reset pinch state
+    pinchStart.current = { distance: 0, transform: { scale: 1, offsetX: 0, offsetY: 0 } };
+  
   }, [getCanvasCoords, markers, onAddMarker, onSelectMarker, resetTransform, transform]);
   
   const handleInteractionMove = useCallback((e) => {
