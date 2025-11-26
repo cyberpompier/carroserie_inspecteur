@@ -10,11 +10,15 @@ root.render(
   )
 );
 
-// L'enregistrement du Service Worker est maintenant géré dans index.html
+// Enregistrement du Service Worker avec gestion d'erreurs avancée
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Vérification de l'état du document pour éviter l'erreur "invalid state"
-    if ((document.visibilityState as string) === 'prerender') return;
+    // Cast explicite pour éviter les erreurs de type si 'prerender' n'est pas dans la def standard
+    if ((document.visibilityState as string) === 'prerender') {
+        console.warn('⚠️ Service Worker non enregistré en mode prerender.');
+        return;
+    }
 
     // Utiliser une URL absolue pour éviter les problèmes d'origine croisée dans des environnements de prévisualisation
     const swUrl = `${window.location.origin}/service-worker.js`;
@@ -22,9 +26,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(swUrl)
       .then(reg => console.log('✅ Service Worker enregistré :', reg.scope))
       .catch(err => {
-        // Ignorer les erreurs spécifiques aux environnements restreints (iframe/preview)
-        if (err.message && err.message.includes('invalid state')) {
-          console.warn('⚠️ Service Worker ignoré (environnement restreint).');
+        // Ignorer les erreurs spécifiques aux environnements restreints (iframe/preview) ou état invalide
+        if (err.message && (err.message.includes('invalid state') || err.message.includes('shutting down'))) {
+          console.warn('⚠️ Service Worker ignoré (environnement restreint ou instable).');
         } else {
           console.error('❌ Erreur Service Worker :', err);
         }

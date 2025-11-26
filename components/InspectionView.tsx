@@ -1,10 +1,10 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ImageInspector } from './ImageInspector.js';
 import { DefectList } from './DefectList.js';
 import { Toolbar } from './Toolbar.js';
 import { AddDefectModal } from './AddDefectModal.js';
 import { supabase } from '../lib/supabase.js';
+import { InspectionData, Marker, Vehicle } from '../types.js';
 
 const FACES = [
     { key: 'front', label: 'Avant' },
@@ -13,17 +13,27 @@ const FACES = [
     { key: 'right', label: 'Côté Droit' },
 ];
 
-export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData, onUpdateInspection }) => {
+interface InspectionViewProps {
+  vehicle: Vehicle;
+  userId: string;
+  inspectorName: string;
+  inspectionData: InspectionData;
+  onUpdateInspection: (id: string, data: InspectionData) => void;
+}
+
+export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData, onUpdateInspection }: InspectionViewProps) => {
   const [currentFace, setCurrentFace] = useState('front');
   const [isUploading, setIsUploading] = useState(false);
-  const [pendingMarker, setPendingMarker] = useState(null);
+  const [pendingMarker, setPendingMarker] = useState<{x: number, y: number} | null>(null);
   const [authorName, setAuthorName] = useState(inspectorName || '');
-  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+  const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null);
   
   const allMarkers = Object.values(inspectionData.markers).flat();
-  // @ts-ignore
-  const nextId = useRef(Math.max(0, ...allMarkers.map(m => m.id)) + 1);
-  const fileInputRef = useRef(null);
+  
+  // Utilisation sécurisée de Math.max avec une liste vide
+  const nextId = useRef(allMarkers.length > 0 ? Math.max(...allMarkers.map(m => m.id)) + 1 : 1);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetFace = useRef('front');
   
   useEffect(() => {
@@ -85,7 +95,7 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
     if (!pendingMarker) return;
 
     setAuthorName(author);
-    const newMarker = {
+    const newMarker: Marker = {
       id: nextId.current++,
       x: pendingMarker.x,
       y: pendingMarker.y,
@@ -114,8 +124,8 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
         ...inspectionData,
         markers: {
             ...inspectionData.markers,
-            // @ts-ignore
-            [currentFace]: inspectionData.markers[currentFace].filter(m => m.id !== id)
+            // Cast explicite pour éviter l'erreur TS sur l'indexation dynamique
+            [currentFace]: (inspectionData.markers[currentFace] || []).filter(m => m.id !== id)
         }
     };
     onUpdateInspection(vehicle.id, newInspectionData);
@@ -136,7 +146,6 @@ export const InspectionView = ({ vehicle, userId, inspectorName, inspectionData,
 
   const imagePath = inspectionData.images[currentFace];
   const markers = inspectionData.markers[currentFace];
-  // @ts-ignore
   const selectedMarker = markers.find(m => m.id === selectedMarkerId) || null;
 
   return React.createElement(React.Fragment, null,
